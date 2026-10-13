@@ -42,11 +42,10 @@ Enter:
 
 | Run | Command | Predicted final temperature | Simulated final temperature | Measured final temperature | Difference or note |
 |---|---:|---:|---:|---:|---|
-| Heating | $+15$ PWM | $29.31^\circ\mathrm C$ |  |  |  |
-| Cooling | $-130$ PWM | $-4.00^\circ\mathrm C$ |  |  |  |
+| Heating | $+15$ PWM | $29.31^\circ\mathrm C$ | 29.27C | 28.75C | 0.52 |
+| Cooling | $-130$ PWM | $-4.00^\circ\mathrm C$ | -4C | -3.5C | -0.5 |
 
-Smaller $\Delta t$ used: ______ s  
-Did the result change appreciably? ______
+Did the result change appreciably? No. When using a smaller $\Delta t$ the results didn't change much
 
 ## 3. P-control runs
 
@@ -54,7 +53,7 @@ Select `p` and use a $30^\circ\mathrm C$ setpoint.
 
 | $K_p$ | Predicted droop | Predicted final temperature | Predicted closed-loop time constant | Simulated result agrees? |
 |---:|---:|---:|---:|:---:|
-| 2 PWM/°C | $4.05^\circ\mathrm C$ | $25.95^\circ\mathrm C$ | $49.1\ \mathrm{s}$ |  |
-| 10 PWM/°C | $1.36^\circ\mathrm C$ | $28.64^\circ\mathrm C$ | $16.5\ \mathrm{s}$ |  |
+| 2 PWM/°C | $4.05^\circ\mathrm C$ | $25.95^\circ\mathrm C$ | $49.1\ \mathrm{s}$ | Yes |
+| 10 PWM/°C | $1.36^\circ\mathrm C$ | $28.64^\circ\mathrm C$ | $16.5\ \mathrm{s}$ | Yes |
 
-Increasing $K_p$ should reduce both droop and response time.
+Increasing $K_p$ reduces both droop and response time.
