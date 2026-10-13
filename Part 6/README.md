@@ -1,20 +1,5 @@
 # Part 6: Add Integral Action in Simulation
 
-## Settings
-
-| $K_p$ | $K_i$ |
-|---:|---:|
-|  |  |
-
-## Procedure
-
-1. Select `p` and let the temperature settle with visible droop.
-2. Change the controller to `pi`.
-3. Press **Zero integral**, then **Resume**.
-4. Watch $e$, $u_P$, $u_I$, and the applied command $u$ as the temperature approaches the setpoint.
-5. After steady state, press **Zero integral** again and observe the temperature.
-
-## Required answers
 
 1. **While $e>0$, why does $u_I$ continue to grow?**  
    The controller keeps adding the positive error to the integral state. Because $u_I=K_iq$, the integral contribution grows while positive error remains.
