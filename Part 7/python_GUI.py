@@ -11,7 +11,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 
 # ---------- Settings to change before running ----------
-SERIAL_PORT = "/dev/ttyACM0"
+SERIAL_PORT = "/dev/cu.usbmodem101"  # Change to your Arduino's serial port
 BAUD_RATE = 9600
 WINDOW_DURATION_SECONDS = 120.0
 UPDATE_INTERVAL_MILLISECONDS = 100
