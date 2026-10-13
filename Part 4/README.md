@@ -12,17 +12,19 @@ $$
 
 | Command | Predicted final temperature | Simulated final temperature |
 |---:|---:|---:|
-| $+25$ PWM | $33.50^\circ\mathrm C$ |  |
-| $-25$ PWM | $16.25^\circ\mathrm C$ |  |
-| $-50$ PWM | $10.50^\circ\mathrm C$ |  |
+| $+25$ PWM | $33.50^\circ\mathrm C$ | 33.5C |
+| $-25$ PWM | $16.25^\circ\mathrm C$ | 16.25C |
+| $-50$ PWM | $10.50^\circ\mathrm C$ | 10.50C |
 
 The heating and cooling changes are unequal because $\chi_h\ne\chi_c$.
 
 | Check | Calculated value | Simulation value |
 |---|---:|---:|
 | $\chi_h=(T_{\mathrm{ss}}-22)/u$ |  | $0.46^\circ\mathrm C/\mathrm{PWM}$ |
-| $\chi_c=(22-T_{\mathrm{ss}})/|u|$ |  | $0.23^\circ\mathrm C/\mathrm{PWM}$ |
+| $\chi_c=(22-T_{\mathrm{ss}})/u$ |  | $0.23^\circ\mathrm C/\mathrm{PWM}$ |
 | $r=\chi_h/\chi_c$ |  | 2.00 |
+
+When doubling C, the steady state temperature remains unchanged because T_ss does not depend on C at all. The transient temperature does change, since it is reliant on C.
 
 ## 2. Runs using our measured values
 
