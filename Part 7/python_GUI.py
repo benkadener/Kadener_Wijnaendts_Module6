@@ -4,6 +4,8 @@ import csv
 import re
 import sys
 from collections import deque
+from datetime import datetime
+from pathlib import Path
 
 import pyqtgraph as pg
 import serial
@@ -15,8 +17,10 @@ SERIAL_PORT = "/dev/cu.usbmodem101"  # Change to your Arduino's serial port
 BAUD_RATE = 9600
 WINDOW_DURATION_SECONDS = 120.0
 UPDATE_INTERVAL_MILLISECONDS = 100
-CSV_FILENAME = "temperature_measurements.csv"
+RUN_DATA_DIRECTORY = Path(__file__).resolve().parent / "run_data"
 INITIAL_SETPOINT_C = 32.5
+MINIMUM_SETPOINT_C = 5.0
+MAXIMUM_SETPOINT_C = 35.0
 INITIAL_PROPORTIONAL_GAIN = 1.0
 INITIAL_INTEGRAL_GAIN = 0.08
 PWM_LIMIT = 255
@@ -111,10 +115,12 @@ class TemperatureWindow(QtWidgets.QMainWindow):
 		controls_layout.addWidget(self.control_mode, 2, 1)
 
 		self.setpoint_input = QtWidgets.QLineEdit(str(INITIAL_SETPOINT_C))
-		self.setpoint_input.setValidator(QtGui.QDoubleValidator(30.0, 35.0, 2, self))
+		self.setpoint_input.setValidator(
+			QtGui.QDoubleValidator(MINIMUM_SETPOINT_C, MAXIMUM_SETPOINT_C, 2, self)
+		)
 		self.setpoint_input.setMaximumWidth(80)
 		self.setpoint_input.editingFinished.connect(self.setpoint_changed)
-		controls_layout.addWidget(QtWidgets.QLabel("Setpoint (30-35 C)"), 2, 2)
+		controls_layout.addWidget(QtWidgets.QLabel("Setpoint (5-35 C)"), 2, 2)
 		controls_layout.addWidget(self.setpoint_input, 2, 3)
 
 		self.gain_input = QtWidgets.QLineEdit(str(INITIAL_PROPORTIONAL_GAIN))
@@ -137,6 +143,13 @@ class TemperatureWindow(QtWidgets.QMainWindow):
 		self.zero_integral_button = QtWidgets.QPushButton("Zero integral")
 		self.zero_integral_button.clicked.connect(self.zero_integral)
 		controls_layout.addWidget(self.zero_integral_button, 4, 0, 1, 2)
+
+		self.new_run_button = QtWidgets.QPushButton("New run CSV")
+		self.new_run_button.clicked.connect(self.start_new_run)
+		controls_layout.addWidget(self.new_run_button, 4, 2, 1, 2)
+		self.csv_filename_value = QtWidgets.QLabel("No run file")
+		controls_layout.addWidget(QtWidgets.QLabel("Current CSV"), 5, 0)
+		controls_layout.addWidget(self.csv_filename_value, 5, 1, 1, 4)
 
 		self.temperature_value = QtWidgets.QLabel("-- C")
 		self.pwm_value = QtWidgets.QLabel("--")
@@ -214,33 +227,67 @@ class TemperatureWindow(QtWidgets.QMainWindow):
 		# Start with the TEC off and put the Arduino under serial control.
 		self.serial_port = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0)
 		self.send_control_command(0, "HEAT")
-		self.csv_file = open(CSV_FILENAME, "a", newline="")
-		self.csv_writer = csv.writer(self.csv_file)
-		if self.csv_file.tell() == 0:
-			self.csv_writer.writerow(
-				[
-					"time_s",
-					"temperature_C",
-					"setpoint_C",
-					"error_C",
-					"controller_mode",
-					"kp_pwm_per_C",
-					"ki_pwm_per_C_s",
-					"dt_s",
-					"integral_error_C_s",
-					"u_p_pwm",
-					"u_i_pwm",
-					"requested_signed_pwm",
-					"applied_signed_pwm",
-					"arduino_pwm",
-					"arduino_heat_cool",
-				]
-			)
-			self.csv_file.flush()
+		self.csv_file = None
+		self.csv_writer = None
+		self.open_new_csv()
 
 		self.timer = QtCore.QTimer(self)
 		self.timer.timeout.connect(self.read_measurements)
 		self.timer.start(UPDATE_INTERVAL_MILLISECONDS)
+
+	def open_new_csv(self):
+		"""Create a uniquely named CSV for the current controller settings."""
+		RUN_DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
+		mode = self.control_mode.currentText().lower().replace("-", "_")
+		kp = f"{self.proportional_gain:g}".replace(".", "p")
+		ki = f"{self.integral_gain:g}".replace(".", "p")
+		timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+		filename = f"run_{timestamp}_{mode}_kp{kp}_ki{ki}.csv"
+		path = RUN_DATA_DIRECTORY / filename
+		self.csv_file = open(path, "x", newline="")
+		self.csv_writer = csv.writer(self.csv_file)
+		self.csv_writer.writerow(
+			[
+				"time_s",
+				"temperature_C",
+				"setpoint_C",
+				"error_C",
+				"controller_mode",
+				"kp_pwm_per_C",
+				"ki_pwm_per_C_s",
+				"dt_s",
+				"integral_error_C_s",
+				"u_p_pwm",
+				"u_i_pwm",
+				"requested_signed_pwm",
+				"applied_signed_pwm",
+				"arduino_pwm",
+				"arduino_heat_cool",
+			]
+		)
+		self.csv_file.flush()
+		self.csv_filename_value.setText(str(path))
+
+	def start_new_run(self, checked=False):
+		"""Safely stop output and begin recording into a fresh run file."""
+		self.set_pwm_value(0)
+		self.send_control_command(0, "HEAT")
+		self.zero_integral(update_output=False)
+		if self.csv_file is not None:
+			self.csv_file.close()
+		for values in (
+			self.times,
+			self.temperatures,
+			self.setpoints,
+			self.errors,
+			self.signed_pwms,
+			self.proportional_pwms,
+			self.integral_pwms,
+			self.requested_pwms,
+		):
+			values.clear()
+		self.last_measurement_time = None
+		self.open_new_csv()
 
 	def set_pwm_value(self, pwm):
 		"""Keep the slider and text box synchronized at a valid PWM value."""
@@ -285,7 +332,7 @@ class TemperatureWindow(QtWidgets.QMainWindow):
 			setpoint = float(self.setpoint_input.text())
 		except ValueError:
 			setpoint = INITIAL_SETPOINT_C
-		setpoint = max(30.0, min(35.0, setpoint))
+		setpoint = max(MINIMUM_SETPOINT_C, min(MAXIMUM_SETPOINT_C, setpoint))
 		self.setpoint = setpoint
 		self.setpoint_input.setText(f"{setpoint:g}")
 		if self.feedback_enabled():

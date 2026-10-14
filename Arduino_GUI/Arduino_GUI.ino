@@ -22,7 +22,8 @@ const float beta = 4540.0;           // K
 const int numSamples = 1000;
 
 // ---------- Software safety ----------
-const float TEMP_LIMIT = 60.0;       // degrees C
+const float LOW_TEMP_LIMIT = 5.0;    // degrees C
+const float HIGH_TEMP_LIMIT = 60.0;  // degrees C
 
 // ---------- Control variables ----------
 int pwmCommand = 0;
@@ -175,9 +176,9 @@ void loop() {
 
   bool safetyShutdown = false;
 
-  if (temperatureC >= TEMP_LIMIT) {
+  if (temperatureC <= LOW_TEMP_LIMIT || temperatureC >= HIGH_TEMP_LIMIT) {
 
-    // Temperature too high:
+    // Temperature is outside the safe range:
     // force BOTH H-bridge PWM outputs to zero.
     analogWrite(pwmPin9, 0);
     analogWrite(pwmPin10, 0);
